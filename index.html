@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Keyboard Visualizer</title>
+
+<style>
+body {
+    margin: 0;
+    overflow: hidden;
+    background: black;
+    font-family: Consolas, monospace;
+}
+
+/* Night sky canvas */
+#sky {
+    position: fixed;
+    top: 0;
+    left: 0;
+    opacity: 0.6;
+}
+
+/* Key history */
+#history {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 260px;
+}
+
+/* ASCII display */
+#ascii {
+    text-align: center;
+    font-size: 90px;
+    color: cyan;
+    margin-top: 120px;
+}
+
+/* Keyboard layout */
+#keyboard {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.key {
+    display: inline-block;
+    width: 45px;
+    height: 45px;
+    margin: 4px;
+    line-height: 45px;
+    text-align: center;
+    border-radius: 6px;
+    background: #222;
+    color: #aaa;
+}
+
+.key.active {
+    background: lime;
+    color: black;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="sky"></canvas>
+
+<div id="history">
+    <input id="seq" type="text" readonly style="width:100%">
+    <br>
+    <button onclick="prev()">◀</button>
+    <button onclick="next()">▶</button>
+</div>
+
+<div id="ascii">Press Any Key</div>
+
+<div id="keyboard"></div>
+
+<script>
+/* ---------------- KEYBOARD LAYOUT ---------------- */
+const keys = "1234567890QWERTYUIOPASDFGHJKLZXCVBNM".split("");
+const keyboard = document.getElementById("keyboard");
+
+keys.forEach(k => {
+    const d = document.createElement("div");
+    d.className = "key";
+    d.id = "k_" + k;
+    d.innerText = k;
+    keyboard.appendChild(d);
+});
+
+/* ---------------- KEY HISTORY ---------------- */
+let history = [];
+let index = -1;
+
+function updateHistory() {
+    document.getElementById("seq").value = history.join(" ");
+}
+
+function prev() {
+    if (index > 0) index--;
+    document.getElementById("ascii").innerText = history[index] || "";
+}
+
+function next() {
+    if (index < history.length - 1) index++;
+    document.getElementById("ascii").innerText = history[index] || "";
+}
+
+/* ---------------- SOUND ENGINE ---------------- */
+const ctx = new AudioContext();
+
+function beep(freq) {
+    const osc = ctx.createOscillator();
+    osc.frequency.value = freq;
+    osc.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+}
+
+/* ---------------- KEY PRESS HANDLER ---------------- */
+document.addEventListener("keydown", e => {
+    const key = e.key.toUpperCase();
+    const ascii = e.key.charCodeAt(0);
+
+    document.getElementById("ascii").innerText = ascii;
+
+    history.push(e.key);
+    index = history.length - 1;
+    updateHistory();
+
+    document.querySelectorAll(".key").forEach(k => k.classList.remove("active"));
+    const el = document.getElementById("k_" + key);
+    if (el) el.classList.add("active");
+
+    /* Sound categories */
+    if ("AEIOUaeiou".includes(e.key)) beep(900);
+    else if (/[a-z]/.test(e.key)) beep(600);
+    else if (/[A-Z]/.test(e.key)) beep(750);
+    else if (/[0-9]/.test(e.key)) beep(450);
+    else beep(300);
+});
+
+/* ---------------- NIGHT SKY ANIMATION ---------------- */
+const canvas = document.getElementById("sky");
+const c = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let stars = Array.from({length: 150}, () => ({
+    x: Math.random()*canvas.width,
+    y: Math.random()*canvas.height,
+    r: Math.random()*2
+}));
+
+function animateSky() {
+    c.clearRect(0,0,canvas.width,canvas.height);
+    c.fillStyle = "white";
+    stars.forEach(s => {
+        c.beginPath();
+        c.arc(s.x, s.y, s.r, 0, Math.PI*2);
+        c.fill();
+        s.y += 0.1;
+        if (s.y > canvas.height) s.y = 0;
+    });
+    requestAnimationFrame(animateSky);
+}
+
+animateSky();
+</script>
+
+</body>
+</html>
